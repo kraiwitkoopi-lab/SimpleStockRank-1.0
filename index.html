@@ -1,0 +1,550 @@
+<!DOCTYPE html>
+<html lang="th">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JomoScorer - Investment Analysis</title>
+
+    <!-- React & ReactDOM -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+
+    <!-- Babel for JSX -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Google Fonts -->
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Sarabun:wght@400;500;700&display=swap"
+        rel="stylesheet">
+
+    <style>
+        body {
+            font-family: 'Inter', 'Sarabun', sans-serif;
+            background-color: #f8f9fa;
+        }
+
+        .scrollbar-hide::-webkit-scrollbar {
+            display: none;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background-color: #cbd5e1;
+            border-radius: 4px;
+        }
+
+        .fade-in {
+            animation: fadeIn 0.3s ease-in;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(5px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useRef } = React;
+
+        // --- INTERNAL ICON COMPONENTS ---
+        const IconBase = ({ children, size = 24, className = "" }) => (
+            <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>{children}</svg>
+        );
+        const Icons = {
+            LayoutDashboard: (props) => <IconBase {...props}><rect width="7" height="9" x="3" y="3" rx="1" /><rect width="7" height="5" x="14" y="3" rx="1" /><rect width="7" height="9" x="14" y="12" rx="1" /><rect width="7" height="5" x="3" y="16" rx="1" /></IconBase>,
+            Plus: (props) => <IconBase {...props}><path d="M5 12h14" /><path d="M12 5v14" /></IconBase>,
+            MessageSquare: (props) => <IconBase {...props}><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></IconBase>,
+            Settings: (props) => <IconBase {...props}><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.38a2 2 0 0 0-.73-2.73l-.15-.1a2 2 0 0 1-1-1.72v-.51a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z" /><circle cx="12" cy="12" r="3" /></IconBase>,
+            Trash2: (props) => <IconBase {...props}><path d="M3 6h18" /><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" /><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" /><line x1="10" x2="10" y1="11" y2="17" /><line x1="14" x2="14" y1="11" y2="17" /></IconBase>,
+            ChevronRight: (props) => <IconBase {...props}><path d="m9 18 6-6-6-6" /></IconBase>,
+            BarChart3: (props) => <IconBase {...props}><path d="M3 3v18h18" /><path d="M18 17V9" /><path d="M13 17V5" /><path d="M8 17v-3" /></IconBase>,
+            TrendingUp: (props) => <IconBase {...props}><polyline points="23 6 13.5 15.5 8.5 10.5 1 18" /><polyline points="17 6 23 6 23 12" /></IconBase>,
+            Brain: (props) => <IconBase {...props}><path d="M12 20h9" /><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" /></IconBase>,
+            Sparkles: (props) => <IconBase {...props}><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3z" /></IconBase>,
+            ArrowLeft: (props) => <IconBase {...props}><path d="m12 19-7-7 7-7" /><path d="M19 12H5" /></IconBase>,
+            Loader2: (props) => <IconBase {...props}><path d="M21 12a9 9 0 1 1-6.219-8.56" /></IconBase>,
+            FileText: (props) => <IconBase {...props}><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z" /><polyline points="14 2 14 8 20 8" /></IconBase>,
+            Lightbulb: (props) => <IconBase {...props}><path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-1 1.5-2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5" /><path d="M9 18h6" /><path d="M10 22h4" /></IconBase>
+        };
+        const { LayoutDashboard, Plus, MessageSquare, Settings, Trash2, ChevronRight, BarChart3, TrendingUp, Brain, Sparkles, ArrowLeft, Loader2, FileText, Lightbulb } = Icons;
+
+        // --- BACKEND API LAYER ---
+        const API_URL = "http://127.0.0.1:8000/api";
+
+        const api = {
+            // Projects
+            getProjects: async () => {
+                const res = await fetch(`${API_URL}/projects`);
+                return res.json();
+            },
+            saveProject: async (project) => {
+                const res = await fetch(`${API_URL}/projects`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(project)
+                });
+                return res.json();
+            },
+            deleteProject: async (id) => {
+                await fetch(`${API_URL}/projects/${id}`, { method: 'DELETE' });
+            },
+
+            // AI & Logic
+            chat: async (message, history) => {
+                const res = await fetch(`${API_URL}/chat`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message, history })
+                });
+                const data = await res.json();
+                return data.reply;
+            },
+            analyzeStock: async (symbol) => {
+                const res = await fetch(`${API_URL}/analyze-stock`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ symbol })
+                });
+                return res.json();
+            },
+            getVerdict: async (symbol, metrics, score, grade) => {
+                const res = await fetch(`${API_URL}/verdict`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ symbol, metrics, score, grade })
+                });
+                const data = await res.json();
+                return data.verdict;
+            },
+            getStrategy: async (portfolioSummary, targetReturn) => {
+                const res = await fetch(`${API_URL}/strategy`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ portfolio_summary: portfolioSummary, target_return: targetReturn })
+                });
+                const data = await res.json();
+                return data.strategy;
+            },
+            // [NEW] Scoring Logic from Backend
+            calculateScore: async (metrics, weights, targetReturn) => {
+                const res = await fetch(`${API_URL}/calculate-score`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ metrics, weights, target_return: targetReturn })
+                });
+                return res.json();
+            },
+            // [NEW] AI Weight Suggestion
+            suggestWeights: async (projectName, targetReturn) => {
+                const res = await fetch(`${API_URL}/suggest-weights`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ project_name: projectName, target_return: targetReturn })
+                });
+                return res.json();
+            }
+        };
+
+        // --- Components ---
+
+        const Dashboard = ({ projects, onCreateProject, onSelectProject, onDeleteProject }) => {
+            const [newName, setNewName] = useState("");
+            const [isCreating, setIsCreating] = useState(false);
+
+            const handleCreate = async () => {
+                if (!newName) return;
+                setIsCreating(true);
+                // 1. AI Suggests weights based on name (Backend Logic)
+                let weights = { industry: 15, profit: 25, mos: 25, yield_val: 20, competition: 15 };
+                try {
+                    // Try to get AI suggestion if backend is up
+                    weights = await api.suggestWeights(newName, 10);
+                } catch (e) { console.error("Weight AI failed, using defaults"); }
+
+                onCreateProject(newName, weights);
+                setNewName("");
+                setIsCreating(false);
+            };
+
+            return (
+                <div className="max-w-5xl mx-auto p-6">
+                    <header className="mb-10">
+                        <h1 className="text-3xl font-bold text-slate-800 flex items-center gap-2">
+                            <BarChart3 className="text-blue-600" size={32} />
+                            JomoScorer Projects
+                        </h1>
+                        <p className="text-slate-500 mt-2">Manage your investment portfolios and scoring models.</p>
+                    </header>
+                    <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 mb-8 flex flex-col md:flex-row gap-4 items-end md:items-center">
+                        <div className="flex-1 w-full">
+                            <label className="block text-sm font-medium text-slate-700 mb-1">New Project Name</label>
+                            <input type="text" value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="e.g. Thai Tech Stocks" className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" onKeyDown={(e) => e.key === 'Enter' && !isCreating && handleCreate()} />
+                        </div>
+                        <button onClick={handleCreate} disabled={isCreating} className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-medium flex items-center gap-2 transition-colors justify-center disabled:opacity-70">
+                            {isCreating ? <Loader2 size={20} className="animate-spin" /> : <Plus size={20} />}
+                            {isCreating ? "Consulting Jomo..." : "Create Project"}
+                        </button>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        {projects.map(proj => (
+                            <div key={proj.id} onClick={() => onSelectProject(proj.id)} className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm hover:shadow-md hover:border-blue-300 cursor-pointer transition-all group relative">
+                                <div className="flex justify-between items-start mb-4">
+                                    <div className="bg-blue-50 text-blue-600 p-3 rounded-lg group-hover:bg-blue-600 group-hover:text-white transition-colors"><TrendingUp size={24} /></div>
+                                    <button onClick={(e) => { e.stopPropagation(); onDeleteProject(proj.id); }} className="text-slate-300 hover:text-red-500 transition-colors p-1"><Trash2 size={18} /></button>
+                                </div>
+                                <h3 className="text-lg font-bold text-slate-800 mb-1">{proj.name}</h3>
+                                <p className="text-sm text-slate-500">{proj.stocks.length} stocks tracked</p>
+                                <div className="mt-4 pt-4 border-t border-slate-100 flex justify-between items-center text-xs font-medium text-blue-600 opacity-0 group-hover:opacity-100 transition-opacity"><span>Open Workspace</span><ChevronRight size={16} /></div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            );
+        };
+
+        const Workspace = ({ project, onUpdateProject, onBack }) => {
+            const [chatInput, setChatInput] = useState("");
+            const [stockInput, setStockInput] = useState("");
+            const [chatHistory, setChatHistory] = useState(project.chatHistory || []);
+            const [loadingStocks, setLoadingStocks] = useState({});
+            const [verdictLoading, setVerdictLoading] = useState({});
+            const [strategyLoading, setStrategyLoading] = useState(false);
+            const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+            const [isConfigOpen, setIsConfigOpen] = useState(true);
+            const chatEndRef = useRef(null);
+
+            // Effect to recalculate scores when weights/target/stocks change
+            useEffect(() => {
+                const updateScores = async () => {
+                    let changed = false;
+                    const newStocks = await Promise.all(project.stocks.map(async (s) => {
+                        try {
+                            const res = await api.calculateScore(s.raw_data, project.weights, project.targetReturn);
+                            if (JSON.stringify(res) !== JSON.stringify(s.scoreData)) {
+                                changed = true;
+                                return { ...s, scoreData: res };
+                            }
+                        } catch (e) { }
+                        return s;
+                    }));
+
+                    if (changed) {
+                        onUpdateProject({ ...project, stocks: newStocks }, true);
+                    }
+                };
+
+                const t = setTimeout(updateScores, 500);
+                return () => clearTimeout(t);
+            }, [project.weights, project.targetReturn, JSON.stringify(project.stocks.map(s => s.raw_data))]);
+
+            useEffect(() => { chatEndRef.current?.scrollIntoView({ behavior: "smooth" }); }, [chatHistory]);
+
+            const handleChatSend = async () => {
+                if (!chatInput.trim()) return;
+                const userMsg = { role: "user", text: chatInput };
+                const newHistory = [...chatHistory, userMsg];
+                setChatHistory(newHistory);
+                setChatInput("");
+
+                onUpdateProject({ ...project, chatHistory: newHistory });
+
+                const replyText = await api.chat(chatInput, newHistory);
+
+                const modelMsg = { role: "model", text: replyText };
+                const finalHistory = [...newHistory, modelMsg];
+                setChatHistory(finalHistory);
+                onUpdateProject({ ...project, chatHistory: finalHistory });
+            };
+
+            const handleAddStock = async () => {
+                const symbol = stockInput.trim().toUpperCase();
+                if (!symbol) return;
+                if (project.stocks.find(s => s.symbol === symbol)) return alert("Stock already exists!");
+
+                setStockInput("");
+                setLoadingStocks(prev => ({ ...prev, [symbol]: true }));
+
+                // 1. Placeholder
+                const newStock = {
+                    symbol,
+                    raw_data: { industry_growth: 0, net_profit_growth: 0, mos_status: "Fair", dividend_yield: 0, competition_score: 50, beta: 1.0 },
+                    error: null, verdict: null,
+                    scoreData: { finalScore: '?', grade: '-', riskMult: 1, rawScores: {} }
+                };
+
+                // 2. Fetch Data
+                try {
+                    const metrics = await api.analyzeStock(symbol);
+                    // Calculate immediate score
+                    const scoreRes = await api.calculateScore(metrics, project.weights, project.targetReturn);
+
+                    const finalStocks = [...project.stocks, { ...newStock, raw_data: metrics, scoreData: scoreRes }];
+                    onUpdateProject({ ...project, stocks: finalStocks });
+                } catch (e) {
+                    console.error(e);
+                    // Add partially populated stock if needed, or just alert error
+                } finally {
+                    setLoadingStocks(prev => ({ ...prev, [symbol]: false }));
+                }
+            };
+
+            const handleGenerateVerdict = async (stock, stockScore) => {
+                setVerdictLoading(prev => ({ ...prev, [stock.symbol]: true }));
+                const verdict = await api.getVerdict(stock.symbol, stock.raw_data, stockScore.finalScore, stockScore.grade);
+
+                const updatedStocks = project.stocks.map(s => s.symbol === stock.symbol ? { ...s, verdict } : s);
+                onUpdateProject({ ...project, stocks: updatedStocks });
+                setVerdictLoading(prev => ({ ...prev, [stock.symbol]: false }));
+            };
+
+            const handleGenerateStrategy = async () => {
+                setStrategyLoading(true);
+                const stockSummaries = project.stocks.map(s => {
+                    const score = s.scoreData || { finalScore: 0, grade: 'F' };
+                    return `${s.symbol} (Score: ${score.finalScore}, Grade: ${score.grade})`;
+                }).join(", ");
+
+                const strategy = await api.getStrategy(stockSummaries, project.targetReturn);
+                onUpdateProject({ ...project, portfolioStrategy: strategy });
+                setStrategyLoading(false);
+            };
+
+            const totalWeight = (project.weights.industry || 0) + (project.weights.profit || 0) + (project.weights.mos || 0) + (project.weights.yield_val || 0) + (project.weights.competition || 0);
+
+            return (
+                <div className="h-screen flex flex-col bg-slate-50 overflow-hidden">
+                    {/* Header */}
+                    <header className="bg-white border-b border-slate-200 px-6 py-3 flex justify-between items-center shrink-0 shadow-sm z-10">
+                        <div className="flex items-center gap-4">
+                            <button onClick={onBack} className="p-2 hover:bg-slate-100 rounded-full text-slate-500 transition-colors"><ArrowLeft size={20} /></button>
+                            <div><h1 className="text-xl font-bold text-slate-800 flex items-center gap-2">{project.name}<span className="text-xs font-normal bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full border border-blue-200">Active</span></h1></div>
+                        </div>
+                        <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className={`p-2 rounded-lg transition-colors flex items-center gap-2 text-sm font-medium ${isSidebarOpen ? 'bg-blue-100 text-blue-600' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}><MessageSquare size={18} />{isSidebarOpen ? "Consultant On" : "Consultant Off"}</button>
+                    </header>
+
+                    <div className="flex flex-1 overflow-hidden">
+                        {/* Sidebar */}
+                        <aside className={`flex flex-col border-r border-slate-200 bg-white shrink-0 transition-all duration-300 ${isSidebarOpen ? 'w-[350px] lg:w-[400px]' : 'w-0 overflow-hidden opacity-0 border-none'}`}>
+                            <div className="flex-1 flex flex-col min-h-0">
+                                <div className="p-4 border-b border-slate-100 bg-slate-50/50"><h3 className="font-bold text-slate-700 flex items-center gap-2"><MessageSquare size={18} className="text-blue-500" /> Consultant Jomo</h3></div>
+                                <div className="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar bg-slate-50">
+                                    {chatHistory.length === 0 && <div className="text-center text-slate-400 mt-10 italic"><Brain size={48} className="mx-auto mb-2 opacity-20" /><p>Hello! I'm Jomo.</p></div>}
+                                    {chatHistory.map((msg, i) => (
+                                        <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                                            <div className={`max-w-[85%] px-4 py-2 rounded-2xl text-sm leading-relaxed shadow-sm ${msg.role === 'user' ? 'bg-blue-600 text-white rounded-tr-none' : 'bg-white border border-slate-200 text-slate-700 rounded-tl-none'}`}>{msg.text}</div>
+                                        </div>
+                                    ))}
+                                    <div ref={chatEndRef} />
+                                </div>
+                                <div className="p-4 border-t border-slate-200 bg-white">
+                                    <div className="flex gap-2"><input value={chatInput} onChange={(e) => setChatInput(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleChatSend()} placeholder="Ask for stock ideas..." className="flex-1 px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none" /><button onClick={handleChatSend} className="bg-blue-600 text-white p-2 rounded-lg hover:bg-blue-700"><ChevronRight size={20} /></button></div>
+                                </div>
+                            </div>
+                            <div className="p-4 border-t border-slate-200 bg-slate-50">
+                                <label className="text-xs font-bold text-slate-500 uppercase mb-2 block">Add to Project</label>
+                                <div className="flex gap-2"><input value={stockInput} onChange={(e) => setStockInput(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleAddStock()} placeholder="Symbol" className="flex-1 px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-green-500 outline-none font-semibold uppercase" /><button onClick={handleAddStock} className="bg-green-600 text-white px-4 py-2 rounded-lg font-bold hover:bg-green-700 text-sm">ADD</button></div>
+                            </div>
+                        </aside>
+
+                        {/* Main */}
+                        <main className="flex-1 overflow-y-auto p-6 bg-slate-100">
+                            {/* Config */}
+                            <div className="bg-white rounded-xl shadow-sm border border-slate-200 mb-6 overflow-hidden transition-all">
+                                <div className="p-4 flex justify-between items-center cursor-pointer bg-slate-50/50 hover:bg-slate-50" onClick={() => setIsConfigOpen(!isConfigOpen)}>
+                                    <div className="flex items-center gap-2"><Settings size={20} className="text-slate-500" /> <h3 className="font-bold text-slate-800">Strategy Configuration</h3></div>
+                                    <div className="flex items-center gap-4">
+                                        <span className="text-xs font-bold text-green-700 bg-green-50 px-2 py-1 rounded-full border border-green-100">Target: {project.targetReturn}%</span>
+                                        <span className={`text-xs font-bold px-2 py-1 rounded-full border ${totalWeight === 100 ? 'text-blue-700 bg-blue-50 border-blue-100' : 'text-orange-700 bg-orange-50 border-orange-100'}`}>Weight: {totalWeight}%</span>
+                                        <ChevronRight size={18} className={`text-slate-400 transition-transform ${isConfigOpen ? 'rotate-90' : ''}`} />
+                                    </div>
+                                </div>
+                                {isConfigOpen && (
+                                    <div className="p-6 border-t border-slate-100 fade-in">
+                                        <div className="grid grid-cols-1 lg:grid-cols-6 gap-8">
+                                            <div className="lg:col-span-2 space-y-2">
+                                                <div className="flex justify-between text-xs font-bold text-slate-500"><span>CONSERVATIVE</span><span>AGGRESSIVE</span></div>
+                                                <input type="range" min="1" max="30" value={project.targetReturn} onChange={(e) => onUpdateProject({ ...project, targetReturn: parseInt(e.target.value) })} className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-green-600" />
+                                                <div className="text-center text-xs font-bold text-green-600 mt-1">{project.targetReturn}% Return</div>
+                                            </div>
+                                            <div className="lg:col-span-4 grid grid-cols-5 gap-2">
+                                                {[
+                                                    { key: 'industry', label: 'Industry Growth (3yr)' },
+                                                    { key: 'profit', label: 'Net Profit Growth (5yr)' },
+                                                    { key: 'mos', label: 'MOS (Valuation)' },
+                                                    { key: 'yield_val', label: 'Dividend Yield' },
+                                                    { key: 'competition', label: 'Competitiveness' }
+                                                ].map((item) => (
+                                                    <div key={item.key} className="text-center">
+                                                        <label className="text-[10px] font-bold text-slate-500 capitalize block mb-1 h-8 flex items-center justify-center leading-tight px-1">{item.label}</label>
+                                                        <div className="h-24 flex justify-center py-2 bg-slate-50 rounded-lg border border-slate-100 relative group hover:border-blue-300 transition-colors">
+                                                            <input type="range" min="0" max="100" step="5" value={project.weights[item.key] || 0} onChange={(e) => onUpdateProject({ ...project, weights: { ...project.weights, [item.key]: parseInt(e.target.value) } })} className="w-1 h-20 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-blue-600 -rotate-90 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" style={{ width: '64px', height: '4px' }} />
+                                                        </div>
+                                                        <div className="mt-1 font-bold text-blue-600 text-xs">{project.weights[item.key] || 0}%</div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Scoreboard */}
+                            <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden flex-1">
+                                <div className="p-4 border-b border-slate-200 bg-slate-50 flex justify-between items-center">
+                                    <h3 className="font-bold text-slate-800 flex items-center gap-2"><BarChart3 size={20} className="text-slate-500" /> Scoreboard</h3>
+                                    {project.stocks.length > 0 && <button onClick={handleGenerateStrategy} disabled={strategyLoading} className="bg-purple-600 hover:bg-purple-700 text-white text-xs px-3 py-1.5 rounded-lg font-bold flex items-center gap-2 transition-colors disabled:opacity-50">{strategyLoading ? <Loader2 size={14} className="animate-spin" /> : <Lightbulb size={14} />} Analyze Portfolio Strategy</button>}
+                                </div>
+                                {project.portfolioStrategy && <div className="p-4 bg-purple-50 border-b border-purple-100 fade-in"><div className="flex gap-3"><div className="mt-1"><Sparkles size={18} className="text-purple-600" /></div><div><h4 className="font-bold text-purple-800 text-sm mb-1">Jomo's Portfolio Strategy</h4><div className="text-sm text-purple-900 leading-relaxed whitespace-pre-line">{project.portfolioStrategy}</div></div></div></div>}
+                                {project.stocks.length === 0 ? (
+                                    <div className="p-12 text-center text-slate-400"><TrendingUp size={48} className="mx-auto mb-4 opacity-20" /><p>No stocks in project yet.</p><p className="text-sm">Add stocks from the left panel to begin analysis.</p></div>
+                                ) : (
+                                    <div className="overflow-x-auto">
+                                        <table className="w-full text-left text-sm">
+                                            <thead className="bg-slate-50 text-slate-500 font-semibold border-b border-slate-200">
+                                                <tr><th className="p-4 w-1/4">Symbol</th><th className="p-4 w-1/3">Raw Metrics (Master Model)</th><th className="p-4 text-center">Score Break</th><th className="p-4 text-center">Final Score</th><th className="p-4 text-center">Grade</th><th className="p-4 text-right">Actions</th></tr>
+                                            </thead>
+                                            <tbody className="divide-y divide-slate-100">
+                                                {project.stocks.map(stock => {
+                                                    const isLoading = loadingStocks[stock.symbol];
+                                                    const isVerdictLoading = verdictLoading[stock.symbol];
+                                                    const stockScore = stock.scoreData || { finalScore: '?', grade: '-', riskMult: 1, baseScore: 0, rawScores: {} };
+                                                    const rd = stock.raw_data;
+
+                                                    return (
+                                                        <React.Fragment key={stock.symbol}>
+                                                            <tr className="hover:bg-slate-50 transition-colors">
+                                                                <td className="p-4 font-bold text-slate-800 text-base align-top">{stock.symbol}{isLoading && <Loader2 size={14} className="animate-spin ml-2 inline text-blue-500" />}
+                                                                </td>
+                                                                <td className="p-4 align-top">
+                                                                    <div className="grid grid-cols-2 gap-2 text-xs">
+                                                                        <div className="space-y-1">
+                                                                            <label className="block text-[10px] font-bold text-slate-500">Ind. Growth (3yr)</label>
+                                                                            <input type="number" value={rd.industry_growth_3yr} onChange={(e) => { const val = parseFloat(e.target.value); const newStocks = project.stocks.map(s => s.symbol === stock.symbol ? { ...s, raw_data: { ...s.raw_data, industry_growth_3yr: isNaN(val) ? 0 : val } } : s); onUpdateProject({ ...project, stocks: newStocks }, true); }} className="w-full px-2 py-1 border border-slate-200 rounded text-slate-700 focus:border-blue-500 outline-none" placeholder="%" />
+                                                                        </div>
+                                                                        <div className="space-y-1">
+                                                                            <label className="block text-[10px] font-bold text-slate-500">Profit Growth (5yr)</label>
+                                                                            <input type="number" value={rd.net_profit_growth_5yr} onChange={(e) => { const val = parseFloat(e.target.value); const newStocks = project.stocks.map(s => s.symbol === stock.symbol ? { ...s, raw_data: { ...s.raw_data, net_profit_growth_5yr: isNaN(val) ? 0 : val } } : s); onUpdateProject({ ...project, stocks: newStocks }, true); }} className="w-full px-2 py-1 border border-slate-200 rounded text-slate-700 focus:border-blue-500 outline-none" placeholder="%" />
+                                                                        </div>
+                                                                        <div className="space-y-1">
+                                                                            <label className="block text-[10px] font-bold text-slate-500">PE Ratio</label>
+                                                                            <input type="number" value={rd.pe_ratio} onChange={(e) => { const val = parseFloat(e.target.value); const newStocks = project.stocks.map(s => s.symbol === stock.symbol ? { ...s, raw_data: { ...s.raw_data, pe_ratio: isNaN(val) ? 0 : val } } : s); onUpdateProject({ ...project, stocks: newStocks }, true); }} className="w-full px-2 py-1 border border-slate-200 rounded text-slate-700 focus:border-blue-500 outline-none" />
+                                                                        </div>
+                                                                        <div className="space-y-1">
+                                                                            <label className="block text-[10px] font-bold text-slate-500">Sector PE</label>
+                                                                            <input type="number" value={rd.sector_pe} onChange={(e) => { const val = parseFloat(e.target.value); const newStocks = project.stocks.map(s => s.symbol === stock.symbol ? { ...s, raw_data: { ...s.raw_data, sector_pe: isNaN(val) ? 0 : val } } : s); onUpdateProject({ ...project, stocks: newStocks }, true); }} className="w-full px-2 py-1 border border-slate-200 rounded text-slate-700 focus:border-blue-500 outline-none" />
+                                                                        </div>
+                                                                        <div className="space-y-1">
+                                                                            <label className="block text-[10px] font-bold text-slate-500">Div. Yield %</label>
+                                                                            <input type="number" value={rd.dividend_yield} onChange={(e) => { const val = parseFloat(e.target.value); const newStocks = project.stocks.map(s => s.symbol === stock.symbol ? { ...s, raw_data: { ...s.raw_data, dividend_yield: isNaN(val) ? 0 : val } } : s); onUpdateProject({ ...project, stocks: newStocks }, true); }} className="w-full px-2 py-1 border border-slate-200 rounded text-slate-700 focus:border-blue-500 outline-none" />
+                                                                        </div>
+                                                                        <div className="space-y-1">
+                                                                            <label className="block text-[10px] font-bold text-slate-500">Div. Years (&gt;5)</label>
+                                                                            <input type="number" value={rd.dividend_years_consecutive} onChange={(e) => { const val = parseFloat(e.target.value); const newStocks = project.stocks.map(s => s.symbol === stock.symbol ? { ...s, raw_data: { ...s.raw_data, dividend_years_consecutive: isNaN(val) ? 0 : val } } : s); onUpdateProject({ ...project, stocks: newStocks }, true); }} className="w-full px-2 py-1 border border-slate-200 rounded text-slate-700 focus:border-blue-500 outline-none" />
+                                                                        </div>
+                                                                        <div className="space-y-1">
+                                                                            <label className="block text-[10px] font-bold text-slate-500">Company Growth</label>
+                                                                            <input type="number" value={rd.company_growth_rate} onChange={(e) => { const val = parseFloat(e.target.value); const newStocks = project.stocks.map(s => s.symbol === stock.symbol ? { ...s, raw_data: { ...s.raw_data, company_growth_rate: isNaN(val) ? 0 : val } } : s); onUpdateProject({ ...project, stocks: newStocks }, true); }} className="w-full px-2 py-1 border border-slate-200 rounded text-slate-700 focus:border-blue-500 outline-none" placeholder="%" />
+                                                                        </div>
+                                                                        <div className="space-y-1">
+                                                                            <label className="block text-[10px] font-bold text-slate-500">Beta (Risk)</label>
+                                                                            <input type="number" value={rd.beta} onChange={(e) => { const val = parseFloat(e.target.value); const newStocks = project.stocks.map(s => s.symbol === stock.symbol ? { ...s, raw_data: { ...s.raw_data, beta: isNaN(val) ? 1.0 : val } } : s); onUpdateProject({ ...project, stocks: newStocks }, true); }} className="w-full px-2 py-1 border border-slate-200 rounded text-slate-700 focus:border-blue-500 outline-none" step="0.1" />
+                                                                        </div>
+                                                                    </div>
+                                                                </td>
+                                                                <td className="p-4 text-center align-top">
+                                                                    <div className="text-xs text-slate-500">Base: <b>{stockScore.baseScore}</b></div>
+                                                                    <div className="text-xs text-slate-400">Mult: x{stockScore.riskMult}</div>
+                                                                </td>
+                                                                <td className="p-4 text-center align-top"><div className="text-2xl font-bold text-slate-800">{stockScore.finalScore}</div></td>
+                                                                <td className="p-4 text-center align-top"><span className={`inline-block w-8 h-8 leading-8 rounded-lg font-bold text-white shadow-sm ${stockScore.grade === 'A' ? 'bg-green-500' : stockScore.grade === 'B' ? 'bg-yellow-500' : stockScore.grade === 'C' ? 'bg-orange-500' : 'bg-red-500'}`}>{stockScore.grade}</span></td>
+                                                                <td className="p-4 text-right align-top"><div className="flex justify-end gap-2"><button onClick={() => handleGenerateVerdict(stock, stockScore)} disabled={isVerdictLoading} className="text-blue-400 hover:text-blue-600 p-2 hover:bg-blue-50 rounded-lg transition-colors">{isVerdictLoading ? <Loader2 size={18} className="animate-spin" /> : <FileText size={18} />}</button><button onClick={() => { const newStocks = project.stocks.filter(s => s.symbol !== stock.symbol); onUpdateProject({ ...project, stocks: newStocks }); }} className="text-slate-300 hover:text-red-500 p-2 hover:bg-red-50 rounded-lg transition-colors"><Trash2 size={18} /></button></div></td>
+                                                            </tr>
+                                                            {stock.verdict && <tr className="bg-blue-50/50"><td colSpan="6" className="px-4 py-3 border-b border-blue-100"><div className="flex gap-2 text-sm text-slate-700 fade-in"><MessageSquare size={16} className="text-blue-500 mt-1 shrink-0" /><div className="italic"><span className="font-bold text-blue-700 not-italic">Jomo Verdict: </span>{stock.verdict}</div></div></td></tr>}
+                                                        </React.Fragment>
+                                                    );
+                                                })}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                )}
+                            </div>
+                        </main>
+                    </div>
+                </div>
+            );
+        };
+
+        const App = () => {
+            const [view, setView] = useState("dashboard");
+            const [activeProjectId, setActiveProjectId] = useState(null);
+
+            // Backend Integration replacing storage
+            const [projects, setProjects] = useState([]);
+
+            // Load Projects from DB
+            useEffect(() => {
+                api.getProjects().then(data => setProjects(data));
+            }, []); // Run on mount
+
+            const handleCreateProject = async (name, weights = null) => {
+                const newProject = {
+                    id: Date.now().toString(),
+                    name: name,
+                    stocks: [],
+                    weights: weights || { industry: 15, profit: 25, mos: 25, yield_val: 20, competition: 15 },
+                    targetReturn: 10,
+                    chatHistory: [],
+                    portfolioStrategy: null
+                };
+                // Save to DB
+                await api.saveProject(newProject);
+                setProjects(prev => [...prev, newProject]);
+                setActiveProjectId(newProject.id);
+                setView("workspace");
+            };
+
+            const handleUpdateProject = (updatedProject, skipSave = false) => {
+                // Optimistic UI update
+                setProjects(projects.map(p => p.id === updatedProject.id ? updatedProject : p));
+                // Background save
+                if (!skipSave) api.saveProject(updatedProject);
+            };
+
+            const handleDeleteProject = async (id) => {
+                setProjects(projects.filter(p => p.id !== id));
+                await api.deleteProject(id);
+            };
+
+            return (
+                <div className="min-h-screen">
+                    {view === "dashboard" && <Dashboard projects={projects} onCreateProject={handleCreateProject} onSelectProject={(id) => { setActiveProjectId(id); setView("workspace"); }} onDeleteProject={handleDeleteProject} />}
+                    {view === "workspace" && activeProjectId && projects.find(p => p.id === activeProjectId) && (
+                        <Workspace project={projects.find(p => p.id === activeProjectId)} onUpdateProject={handleUpdateProject} onBack={() => setView("dashboard")} />
+                    )}
+                </div>
+            );
+        };
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+
+</html>
