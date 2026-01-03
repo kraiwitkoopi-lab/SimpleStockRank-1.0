@@ -1,0 +1,1 @@
+# SimpleStockRank-1.0
